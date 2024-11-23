@@ -1,0 +1,175 @@
+import cv2
+import numpy as np
+import os
+import pandas as pd
+from einops import rearrange
+import random
+from torch.utils.data import Dataset
+
+class TrainDataset(Dataset):
+    def __init__(self, path, width=256, dd=64):
+        self.path = path
+        self.data = pd.read_csv(os.path.join(self.path, 'train.csv'))
+        self.width = width
+        self.dd = dd
+
+    def __len__(self):
+        return len(self.data)
+        # return 64
+
+    def __getitem__(self, idx):
+        item = self.data.iloc[idx]
+        PID = item['PID']
+        CF_path = item['CF_path']
+        OCT_path = item['OCT_path']
+        prompts = [
+            "A cross-section of the retina obtained using optical coherence tomography, medical image, black and white",
+            "Optical Coherence Tomography (OCT) image of the retina, grayscale, detailed cross-section",
+            "High-resolution OCT scan of the retina, medical imaging, monochrome",
+            "Retina OCT slice, clear and sharp, black and white medical visualization",
+            "OCT retinal image, showing layers and structures, medical black and white",
+            "Cross-sectional OCT view of the retina, detailed medical image, grayscale",
+            "Retina OCT scan, high definition, black and white, medical diagnostic",
+            "Optical coherence tomography of the retina, clear layers, medical image, B&W",
+            "Retina OCT image, detailed cross-section, medical study, grayscale",
+            "OCT scan of the retina, high contrast, black and white, medical analysis",
+            "Retina OCT slice, detailed medical image, black and white, cross-sectional view",
+            "Enhanced OCT image of the retina, medical-grade, black and white, detailed",
+            "In vivo OCT scan of the retina, high resolution, monochromatic, medical study",
+            "OCT imaging of retinal layers, crisp detail, medical black and white",
+            "Retina OCT profile, high-definition, grayscale, medical diagnostic tool",
+            "Optical coherence tomogram of the retina, clear delineation, B&W, medical",
+            "Cross-sectional OCT of the retina, detailed texture, medical imaging, grayscale",
+            "Retina OCT visualization, sharp layers, black and white, medical analysis",
+            "OCT scan of the retina, detailed anatomical features, monochromatic, medical",
+            "Retina OCT snapshot, high clarity, black and white, medical documentation",
+            "Optical coherence tomography slice of the retina, detailed, monochromatic, medical"
+        ]
+
+        source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
+
+        source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
+        h, w, _ = source.shape
+        source = source[:, w//2-h//2:w//2+h//2, :]
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        source = cv2.resize(source, (self.width, self.width))
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        global_hint = source
+
+        local_hint = []
+        local_hint.append(source[:,self.width//2-self.dd:self.width//2+self.dd,:])
+
+        # 以图像中心作为旋转中心
+        x0, y0 = self.width//2, self.width//2  
+        # 逆时针旋转角度，30 60 90 120 150
+        for theta in range(30, 180, 30):
+            MAR = cv2.getRotationMatrix2D((x0,y0), theta, 1.0)
+            img = cv2.warpAffine(source, MAR, (self.width, self.width))
+            local_hint.append(img[:,self.width//2-self.dd:self.width//2+self.dd,:])
+
+        local_hint = np.stack(local_hint, axis=0)
+        local_hint = rearrange(local_hint, 'n h w c -> h (n w) c')
+        local_hint = cv2.flip(cv2.transpose(local_hint), 1)
+
+        target = np.zeros((self.width, self.width, 6))
+        for i in range(6):
+            target_i = cv2.imread(os.path.join(self.path, 'OCT', OCT_path, f"{OCT_path}_{i}.jpg"), cv2.IMREAD_GRAYSCALE)
+            if idx <= 728:
+                target_i = target_i[:496,-768:]
+            target_i = cv2.resize(target_i, (self.width, self.width))
+            target[:, :, i] = target_i
+        
+        # Normalize target images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
+
+        return dict(
+            jpg=target, 
+            txt=prompts[random.randint(0, len(prompts)-1)], 
+            hint=(global_hint, local_hint), 
+            id=idx,
+            PID=PID,
+            CF_path=CF_path,
+            OCT_path=OCT_path
+        )
+    
+class ValidDataset(Dataset):
+    def __init__(self, path, width=256, dd=64):
+        self.path = path
+        self.data = pd.read_csv(os.path.join(self.path, 'val.csv'))
+        self.width = width
+        self.dd = dd
+
+    def __len__(self):
+        return len(self.data)
+        # return 8
+
+    def __getitem__(self, idx):
+        item = self.data.iloc[idx]
+        PID = item['PID']
+        CF_path = item['CF_path']
+        prompt = "A cross-section of the retina obtained using optical coherence tomography, medical image, black and white"
+
+        source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
+        h, w, _ = source.shape
+        source = source[:, w//2-h//2:w//2+h//2, :]
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        source = cv2.resize(source, (self.width, self.width))
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        global_hint = rearrange(source, 'h w c -> c h w')
+
+        local_hint = []
+        local_hint.append(source[:,self.width//2-self.dd:self.width//2+self.dd,:])
+
+        # 以图像中心作为旋转中心
+        x0, y0 = self.width//2, self.width//2  
+        # 逆时针旋转角度，30 60 90 120 150
+        for theta in range(30, 180, 30):
+            MAR = cv2.getRotationMatrix2D((x0,y0), theta, 1.0)
+            img = cv2.warpAffine(source, MAR, (self.width, self.width))
+            local_hint.append(img[:,self.width//2-self.dd:self.width//2+self.dd,:])
+
+        local_hint = np.stack(local_hint, axis=0)
+        local_hint = rearrange(local_hint, 'n h w c -> h (n w) c')
+        local_hint = cv2.flip(cv2.transpose(local_hint), 1)
+        
+        # Normalize target images to [-1, 1].
+        target = np.zeros((self.width, self.width, 6))
+
+        return dict(
+            jpg=target, 
+            txt=prompt, 
+            hint=(global_hint, local_hint), 
+            id=idx,
+            PID=PID,
+            CF_path=CF_path,
+        )
+
+if __name__ == '__main__':
+
+    data_path = "/home/pod/shared-nvme/data/EyeOCT/train"
+    train_dataset = TrainDataset(data_path)
+    print(len(train_dataset)) # 750
+
+    item = train_dataset[0]
+    jpg = item['jpg']
+    txt = item['txt']
+    hint_global = item['hint'][0]
+    hint_local = item['hint'][1]
+    id_ = item['id']
+    PID = item['PID']
+    CF_path = item['CF_path']
+    OCT_path = item['OCT_path']
+    print(txt)
+    print(jpg.shape)
+    print(hint_global.shape)
+    print(hint_local.shape)
+    print(id_)
+    print(PID)
+    print(CF_path)
+    print(OCT_path)
