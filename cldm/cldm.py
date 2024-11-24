@@ -90,7 +90,7 @@ class OCTLDM(LatentDiffusion):
         cond_global = c["cond_global"][0][:N]
         cond_local = c["cond_local"][0][:N]
 
-        c_full = dict(cond_global=[cond_global], cond_local=[cond_local]),
+        c_full = dict(cond_global=[cond_global], cond_local=[cond_local])
         samples_cfg, _ = self.sample_log(cond=c_full,
                                             batch_size=N, ddim=use_ddim,
                                             ddim_steps=ddim_steps, eta=ddim_eta,
