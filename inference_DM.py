@@ -7,7 +7,7 @@ from cldm.model import create_model, load_state_dict
 
 # Configs
 resume_path = "/home/pod/project/code/EyeOCT/pretrained/DM/epoch=211-step=9963.ckpt"
-batch_size = 1
+batch_size = 3
 
 # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
 model = create_model('./models/cldm_v15.yaml').cpu()
