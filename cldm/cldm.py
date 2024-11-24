@@ -122,17 +122,11 @@ class OCTLDM(LatentDiffusion):
                 image = image.numpy()
                 image = (image * 255).astype(np.uint8)
                 for i in range(6):
-                    item_path = os.path.join(
-                        foldername, 
-                        images['CF_path'][image_idx].split('.')[0], 
-                    )
+                    CF_name = images['CF_path'][image_idx].split('.')[0]
+                    item_path = os.path.join(foldername, CF_name)
                     os.makedirs(item_path, exist_ok=True)
-                    path = os.path.join(
-                        foldername, 
-                        images['CF_path'][image_idx].split('.')[0], 
-                        f"{images['CF_path'][image_idx]}_{i}.jpg"
-                    )
-                    Image.fromarray(image).save(path)
+                    path = os.path.join(foldername, CF_name, f"{CF_name}_{i}.jpg")
+                    Image.fromarray(image[:,:,i]).save(path)
            
     @torch.no_grad()
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
