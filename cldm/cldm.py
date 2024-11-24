@@ -131,7 +131,7 @@ class OCTLDM(LatentDiffusion):
                     img = image[:,:,i]
                     # 缩放这个黑白图像，高度固定在320像素，宽度固定在448像素
                     img = cv2.resize(img, (448, 320))
-                    Image.fromarray().save(path)
+                    Image.fromarray(img).save(path)
            
     @torch.no_grad()
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
