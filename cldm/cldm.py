@@ -21,11 +21,11 @@ class OCTLDM(LatentDiffusion):
         for param in resnet.parameters():
             param.requires_grad = False
         
-        layer = -4
+        layer = -3
         self.feature_extractor = torch.nn.Sequential(*list(resnet.children())[:layer])
         self.feature_extractor = self.feature_extractor.to(self.device)
 
-        self.global_process = torch.nn.Conv2d(512, num_global_feature, kernel_size=1)
+        self.global_process = torch.nn.Conv2d(1024, num_global_feature, kernel_size=1)
         self.local_process = torch.nn.Linear(512, num_local_feature)
 
     @torch.no_grad()
@@ -87,7 +87,8 @@ class OCTLDM(LatentDiffusion):
 
         N = z.shape[0]
         log["CF_path"] = batch["CF_path"][:N] 
-        cond_global, cond_local = c[0][:N] 
+        cond_global = c["cond_global"][0][:N]
+        cond_local = c["cond_local"][0][:N]
 
         c_full = dict(cond_global=[cond_global], cond_local=[cond_local]),
         samples_cfg, _ = self.sample_log(cond=c_full,

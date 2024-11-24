@@ -23,8 +23,6 @@ class TrainDataset(Dataset):
         OCT_path = item['OCT_path']
 
         source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
-
-        source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
         h, w, _ = source.shape
         source = source[:, w//2-h//2:w//2+h//2, :]
         source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
@@ -96,7 +94,7 @@ class ValidDataset(Dataset):
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0
 
-        global_hint = rearrange(source, 'h w c -> c h w')
+        global_hint = source
 
         local_hint = []
         local_hint.append(source[:,self.width//2-self.dd:self.width//2+self.dd,:])
