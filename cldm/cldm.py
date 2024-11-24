@@ -10,6 +10,7 @@ from ldm.models.diffusion.ddpm import LatentDiffusion
 from ldm.util import log_txt_as_img
 
 from torchvision import models
+import cv2
 
 class OCTLDM(LatentDiffusion):
 
@@ -103,8 +104,9 @@ class OCTLDM(LatentDiffusion):
         return log
 
     def shared_step_test(self, batch, batch_idx):
-        images = self.log_valid_images(batch, ddim_steps=10, unconditional_guidance_scale=7.0)
-        foldername = os.path.join("./log_valid/1124-1830/samples")
+        ddim_steps = 10
+        images = self.log_valid_images(batch, ddim_steps=ddim_steps)
+        foldername = "./log_valid/1124900-ddim{ddim_steps}/samples"
         os.makedirs(foldername, exist_ok=True)
 
         for k in ["samples"]:
@@ -126,7 +128,10 @@ class OCTLDM(LatentDiffusion):
                     item_path = os.path.join(foldername, CF_name)
                     os.makedirs(item_path, exist_ok=True)
                     path = os.path.join(foldername, CF_name, f"{CF_name}_{i}.jpg")
-                    Image.fromarray(image[:,:,i]).save(path)
+                    img = image[:,:,i]
+                    # 缩放这个黑白图像，高度固定在320像素，宽度固定在448像素
+                    img = cv2.resize(img, (448, 320))
+                    Image.fromarray().save(path)
            
     @torch.no_grad()
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
