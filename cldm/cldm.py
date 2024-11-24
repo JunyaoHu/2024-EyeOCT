@@ -84,8 +84,9 @@ class OCTLDM(LatentDiffusion):
 
         log = dict()
         z, c = self.get_input(batch, self.first_stage_key)
-        
+
         N = z.shape[0]
+        log["CF_path"] = batch["CF_path"][:N] 
         cond_global, cond_local = c[0][:N] 
 
         c_full = dict(cond_global=[cond_global], cond_local=[cond_local]),
@@ -102,25 +103,35 @@ class OCTLDM(LatentDiffusion):
 
     def shared_step_test(self, batch, batch_idx):
         images = self.log_valid_images(batch, ddim_steps=10, unconditional_guidance_scale=7.0)
-        
-        # log["samples"]
+        foldername = os.path.join("./log_valid/1124-1830/samples")
+        os.makedirs(foldername, exist_ok=True)
 
-        # for k in images:
-        #     images[k] = images[k][0:]
-        #     if isinstance(images[k], torch.Tensor):
-        #         images[k] = images[k].detach().cpu()
-        #         images[k] = torch.clamp(images[k], -1., 1.)
-        # for k in images:
-        #     bs = images[k].shape[0]
-        #     for image_idx in range(bs): 
-        #         image = images[k][image_idx] # [3, 512, 512]
-        #         image = (image + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
-        #         image = image.transpose(0, 1).transpose(1, 2).squeeze(-1)
-        #         image = image.numpy()
-        #         image = (image * 255).astype(np.uint8)
-        #         path = os.path.join("./log_valid/1015-2017/Realistic Drawing", f"{batch['id'][image_idx]}.jpg")
-        #         os.makedirs(os.path.split(path)[0], exist_ok=True)
-        #         Image.fromarray(image).save(path)
+        for k in ["samples"]:
+            images[k] = images[k][0:]
+            if isinstance(images[k], torch.Tensor):
+                images[k] = images[k].detach().cpu()
+                images[k] = torch.clamp(images[k], -1., 1.)
+
+        for k in ["samples"]:
+            bs = images[k].shape[0]
+            for image_idx in range(bs): 
+                image = images[k][image_idx] # [6, 512, 512]
+                image = (image + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
+                image = image.transpose(0, 1).transpose(1, 2).squeeze(-1)
+                image = image.numpy()
+                image = (image * 255).astype(np.uint8)
+                for i in range(6):
+                    item_path = os.path.join(
+                        foldername, 
+                        images['CF_path'][image_idx].split('.')[0], 
+                    )
+                    os.makedirs(item_path, exist_ok=True)
+                    path = os.path.join(
+                        foldername, 
+                        images['CF_path'][image_idx].split('.')[0], 
+                        f"{images['CF_path'][image_idx]}_{i}.jpg"
+                    )
+                    Image.fromarray(image).save(path)
            
     @torch.no_grad()
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
