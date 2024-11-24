@@ -275,7 +275,7 @@ class BasicTransformerBlock(nn.Module):
 
 # 改写BasicTransformerBlock, 加入关于CF图像的cross-attention
 class OCTTransformerBlock(nn.Module):
-    def __init__(self, dim, n_heads, d_head, dropout=0., text_dim=None, global_dim=None, local_dim=None, gated_ff=True, checkpoint=True):
+    def __init__(self, dim, n_heads, d_head, dropout=0., global_dim=None, local_dim=None, gated_ff=True, checkpoint=True):
         super().__init__()
         self.attn1 = CrossAttention(
             query_dim=dim, 
@@ -283,13 +283,6 @@ class OCTTransformerBlock(nn.Module):
             dim_head=d_head, 
             dropout=dropout,
             context_dim=None
-        )
-        self.attn2 = CrossAttention(
-            query_dim=dim, 
-            context_dim=text_dim,
-            heads=n_heads, 
-            dim_head=d_head, 
-            dropout=dropout
         )
         self.attn3 = CrossAttention(
             query_dim=dim, 
@@ -307,23 +300,21 @@ class OCTTransformerBlock(nn.Module):
         )
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
         self.norm1 = nn.LayerNorm(dim)
-        self.norm2 = nn.LayerNorm(dim)
         self.norm3 = nn.LayerNorm(dim)
         self.norm4 = nn.LayerNorm(dim)
         self.norm5 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
 
-    def forward(self, x, cond_text=None, cond_global=None, cond_local=None):
-        return checkpoint(self._forward, (x, cond_text, cond_global, cond_local), self.parameters(), self.checkpoint)
+    def forward(self, x, cond_global=None, cond_local=None):
+        return checkpoint(self._forward, (x, cond_global, cond_local), self.parameters(), self.checkpoint)
 
-    def _forward(self, x, cond_text=None, cond_global=None, cond_local=None):
+    def _forward(self, x, cond_global=None, cond_local=None):
         # print("cond_text", cond_text.shape)
         # print("cond_global", cond_global.shape)
         # print("cond_local", cond_local.shape)
         # QKV-OCT self-attention
         x = self.attn1(self.norm1(x), context=None) + x
         # Q-OCT KV-text cross-attention
-        x = self.attn2(self.norm2(x), context=cond_text) + x
         # Q-OCT KV-CF_global cross-attention
         x = self.attn3(self.norm3(x), context=cond_global) + x
         # Q-OCT KV-CF_local cross-attention
@@ -368,7 +359,6 @@ class SpatialTransformer(nn.Module):
             #     for d in range(depth)]
             ###################################################################
             [OCTTransformerBlock(inner_dim, n_heads, d_head, dropout=dropout, 
-                                text_dim=context_dim[d]['text_dim'],
                                 global_dim=context_dim[d]['global_dim'],
                                 local_dim=context_dim[d]['local_dim'],
                                 checkpoint=use_checkpoint)
@@ -399,7 +389,6 @@ class SpatialTransformer(nn.Module):
         for i, block in enumerate(self.transformer_blocks):
             x = block(
                 x, 
-                cond_text=context[i]['cond_text'], 
                 cond_global=context[i]['cond_global'], 
                 cond_local=context[i]['cond_local']
             )
