@@ -3,7 +3,6 @@ import numpy as np
 import os
 import pandas as pd
 from einops import rearrange
-import random
 from torch.utils.data import Dataset
 
 class TrainDataset(Dataset):

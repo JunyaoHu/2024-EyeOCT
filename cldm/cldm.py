@@ -26,7 +26,7 @@ class OCTLDM(LatentDiffusion):
         self.feature_extractor = self.feature_extractor.to(self.device)
 
         self.global_process = torch.nn.Conv2d(512, num_global_feature, kernel_size=1)
-        self.local_process = torch.nn.Linear(1024, num_local_feature)
+        self.local_process = torch.nn.Linear(512, num_local_feature)
 
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
@@ -45,12 +45,9 @@ class OCTLDM(LatentDiffusion):
         cond_global = cond_global.to(memory_format=torch.contiguous_format).float()
         
         # 6 是六个方向，dd 是局部所取区域的宽度，长度 w 是 256
-        # [bs, dd*6, 256, 3] -> 
-        # [bs, 3, dd*6, 256]
-        # [bs, dd*6*3, 256]
         bs = cond_local.shape[0]
         cond_local = cond_local.to(self.device)
-        cond_global = einops.rearrange(cond_global, 'b h w c -> b c h w')
+        cond_local = einops.rearrange(cond_local, 'b h w c -> b c h w')
         cond_local_origin = cond_local
         cond_local = einops.rearrange(cond_local, 'b c (d n) w -> (b c d n) w', n=6)
         cond_local = self.local_process(cond_local)
@@ -105,22 +102,25 @@ class OCTLDM(LatentDiffusion):
 
     def shared_step_test(self, batch, batch_idx):
         images = self.log_valid_images(batch, ddim_steps=10, unconditional_guidance_scale=7.0)
-        for k in images:
-            images[k] = images[k][0:]
-            if isinstance(images[k], torch.Tensor):
-                images[k] = images[k].detach().cpu()
-                images[k] = torch.clamp(images[k], -1., 1.)
-        for k in images:
-            bs = images[k].shape[0]
-            for image_idx in range(bs): 
-                image = images[k][image_idx] # [3, 512, 512]
-                image = (image + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
-                image = image.transpose(0, 1).transpose(1, 2).squeeze(-1)
-                image = image.numpy()
-                image = (image * 255).astype(np.uint8)
-                path = os.path.join("./log_valid/1015-2017/Realistic Drawing", f"{batch['id'][image_idx]}.jpg")
-                os.makedirs(os.path.split(path)[0], exist_ok=True)
-                Image.fromarray(image).save(path)
+        
+        # log["samples"]
+
+        # for k in images:
+        #     images[k] = images[k][0:]
+        #     if isinstance(images[k], torch.Tensor):
+        #         images[k] = images[k].detach().cpu()
+        #         images[k] = torch.clamp(images[k], -1., 1.)
+        # for k in images:
+        #     bs = images[k].shape[0]
+        #     for image_idx in range(bs): 
+        #         image = images[k][image_idx] # [3, 512, 512]
+        #         image = (image + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
+        #         image = image.transpose(0, 1).transpose(1, 2).squeeze(-1)
+        #         image = image.numpy()
+        #         image = (image * 255).astype(np.uint8)
+        #         path = os.path.join("./log_valid/1015-2017/Realistic Drawing", f"{batch['id'][image_idx]}.jpg")
+        #         os.makedirs(os.path.split(path)[0], exist_ok=True)
+        #         Image.fromarray(image).save(path)
            
     @torch.no_grad()
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
@@ -136,12 +136,13 @@ class OCTLDM(LatentDiffusion):
         cond_global = c["cond_global"][0][:N]
         cond_local = c["cond_local"][0][:N]
         cond_global_origin = c["cond_global_origin"][0][:N]
-
+        cond_local_origin = c["cond_local_origin"][0][:N]
+        
         N = min(z.shape[0], N)
         n_row = min(z.shape[0], n_row)
         log["reconstruction"] = self.decode_first_stage(z)
         log["control_global"] = cond_global_origin * 2.0 - 1.0
-        log["control_local"] = cond_local * 2.0 - 1.0
+        log["control_local"] = cond_local_origin * 2.0 - 1.0
 
         if unconditional_guidance_scale > 1.0:
             c_full = dict(cond_global=[cond_global], cond_local=[cond_local])
