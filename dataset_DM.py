@@ -64,7 +64,7 @@ class TrainDataset(Dataset):
 
         return dict(
             jpg=target, 
-            txt=None, 
+            txt="", 
             hint=(global_hint, local_hint), 
             id=idx,
             PID=PID,
@@ -119,7 +119,7 @@ class ValidDataset(Dataset):
 
         return dict(
             jpg=target, 
-            txt=None, 
+            txt="", 
             hint=(global_hint, local_hint), 
             id=idx,
             PID=PID,
@@ -134,7 +134,6 @@ if __name__ == '__main__':
 
     item = train_dataset[0]
     jpg = item['jpg']
-    txt = item['txt']
     hint_global = item['hint'][0]
     hint_local = item['hint'][1]
     id_ = item['id']

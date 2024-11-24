@@ -43,7 +43,7 @@ class TrainDataset(Dataset):
 
         return dict(
             jpg=target, 
-            txt=None, 
+            txt="", 
             hint=source, 
             id=idx,
             PID=PID,
@@ -80,7 +80,7 @@ class ValidDataset(Dataset):
 
         return dict(
             jpg=target, 
-            txt=None, 
+            txt="", 
             hint=source, 
             id=idx,
             PID=PID,
