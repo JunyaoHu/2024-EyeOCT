@@ -2,4 +2,5 @@
 eyeoct.egg-info
 
 pretrained/AE/*
+pretrained/DM/*
 taming/*
