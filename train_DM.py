@@ -8,7 +8,7 @@ from cldm.model import create_model, load_state_dict
 
 # Configs
 resume_path = None
-batch_size = 1
+batch_size = 3
 learning_rate = 2e-5
 ddim_steps = 10
 accumulate = 8
