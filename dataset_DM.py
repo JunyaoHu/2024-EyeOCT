@@ -133,6 +133,7 @@ if __name__ == '__main__':
     print(len(train_dataset)) # 750
 
     item = train_dataset[0]
+    txt = item['txt']
     jpg = item['jpg']
     hint_global = item['hint'][0]
     hint_local = item['hint'][1]

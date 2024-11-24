@@ -10,6 +10,7 @@ model:
     cond_stage_key: "txt"
     CF_key: "hint"
     num_global_feature: 256
+    num_local_feature: 256
     image_size: 64
     channels: 4
     cond_stage_trainable: false

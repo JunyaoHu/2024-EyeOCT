@@ -13,7 +13,7 @@ from torchvision import models
 
 class OCTLDM(LatentDiffusion):
 
-    def __init__(self, CF_key, num_global_feature, *args, **kwargs):
+    def __init__(self, CF_key, num_global_feature, num_local_feature, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.CF_key = CF_key
 
@@ -25,20 +25,16 @@ class OCTLDM(LatentDiffusion):
         self.feature_extractor = torch.nn.Sequential(*list(resnet.children())[:layer])
         self.feature_extractor = self.feature_extractor.to(self.device)
 
-        self.global_process = torch.nn.Conv2d(512, num_global_feature, kernel_size=1).cuda()
+        self.global_process = torch.nn.Conv2d(512, num_global_feature, kernel_size=1)
+        self.local_process = torch.nn.Linear(1024, num_local_feature)
 
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
-        x, cond_text = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+        x, _ = super().get_input(batch, self.first_stage_key, *args, **kwargs)
         cond_global, cond_local = batch[self.CF_key]
         if bs is not None:
             cond_global = cond_global[:bs]
             cond_local = cond_local[:bs]
-
-        # [bs, 3, 256, 256] -> 
-        # [bs, 512, 32, 32] -> 
-        # [bs, 256, 32, 32] -> 
-        # [bs, 32*32, 256]
 
         cond_global = cond_global.to(self.device)
         cond_global = einops.rearrange(cond_global, 'b h w c -> b c h w')
@@ -50,14 +46,20 @@ class OCTLDM(LatentDiffusion):
         
         # 6 是六个方向，dd 是局部所取区域的宽度，长度 w 是 256
         # [bs, dd*6, 256, 3] -> 
+        # [bs, 3, dd*6, 256]
         # [bs, dd*6*3, 256]
+        bs = cond_local.shape[0]
         cond_local = cond_local.to(self.device)
-        cond_local = einops.rearrange(cond_local, 'b (d n) w c -> b (c d n) w', n=6)
+        cond_global = einops.rearrange(cond_global, 'b h w c -> b c h w')
+        cond_local_origin = cond_local
+        cond_local = einops.rearrange(cond_local, 'b c (d n) w -> (b c d n) w', n=6)
+        cond_local = self.local_process(cond_local)
+        cond_local = einops.rearrange(cond_local, '(b c d n) w -> b (c d n) w', b=bs, n=6, c=3)
         cond_local = cond_local.to(memory_format=torch.contiguous_format).float()
 
         # cond_global torch.Size([20, 1024, 256]) 
         # cond_local torch.Size([20, 2304=64*2*6*3, 256])
-        return x, dict(cond_global=[cond_global], cond_local=[cond_local], cond_global_origin=[cond_global_origin])
+        return x, dict(cond_global=[cond_global], cond_local=[cond_local], cond_global_origin=[cond_global_origin], cond_local_origin=[cond_local_origin])
 
     def apply_model(self, x_noisy, t, cond, *args, **kwargs):
         assert isinstance(cond, dict)
