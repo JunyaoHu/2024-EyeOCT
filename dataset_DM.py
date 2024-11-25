@@ -33,21 +33,6 @@ class TrainDataset(Dataset):
 
         global_hint = source
 
-        # local_hint = []
-        # local_hint.append(source[:,self.width//2-self.dd:self.width//2+self.dd,:])
-
-        # # 以图像中心作为旋转中心
-        # x0, y0 = self.width//2, self.width//2  
-        # # 逆时针旋转角度，30 60 90 120 150
-        # for theta in range(30, 180, 30):
-        #     MAR = cv2.getRotationMatrix2D((x0,y0), theta, 1.0)
-        #     img = cv2.warpAffine(source, MAR, (self.width, self.width))
-        #     local_hint.append(img[:,self.width//2-self.dd:self.width//2+self.dd,:])
-
-        # local_hint = np.stack(local_hint, axis=0)
-        # local_hint = rearrange(local_hint, 'n h w c -> h (n w) c')
-        # local_hint = cv2.flip(cv2.transpose(local_hint), 1)
-
         target = np.zeros((self.width, self.width, 6))
         for i in range(6):
             target_i = cv2.imread(os.path.join(self.path, 'OCT', OCT_path, f"{OCT_path}_{i}.jpg"), cv2.IMREAD_GRAYSCALE)
@@ -63,7 +48,6 @@ class TrainDataset(Dataset):
             jpg=target, 
             txt="", 
             hint=global_hint, 
-            # hint=(global_hint, local_hint), 
             id=idx,
             PID=PID,
             CF_path=CF_path,
@@ -97,28 +81,12 @@ class ValidDataset(Dataset):
 
         global_hint = source
 
-        # local_hint = []
-        # local_hint.append(source[:,self.width//2-self.dd:self.width//2+self.dd,:])
-
-        # # 以图像中心作为旋转中心
-        # x0, y0 = self.width//2, self.width//2  
-        # # 逆时针旋转角度，30 60 90 120 150
-        # for theta in range(30, 180, 30):
-        #     MAR = cv2.getRotationMatrix2D((x0,y0), theta, 1.0)
-        #     img = cv2.warpAffine(source, MAR, (self.width, self.width))
-        #     local_hint.append(img[:,self.width//2-self.dd:self.width//2+self.dd,:])
-
-        # local_hint = np.stack(local_hint, axis=0)
-        # local_hint = rearrange(local_hint, 'n h w c -> h (n w) c')
-        # local_hint = cv2.flip(cv2.transpose(local_hint), 1)
-        
         # Normalize target images to [-1, 1].
         target = np.zeros((self.width, self.width, 6))
 
         return dict(
             jpg=target, 
             txt="", 
-            # hint=(global_hint, local_hint), 
             hint=global_hint, 
             id=idx,
             PID=PID,
