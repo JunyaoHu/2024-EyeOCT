@@ -75,9 +75,9 @@ class OCTLDM(LatentDiffusion):
 
         return eps
 
-    @torch.no_grad()
-    def get_unconditional_conditioning(self, N):
-        return self.get_learned_conditioning(["chaotic, shadow, worst quality, low quality"] * N)
+    # @torch.no_grad()
+    # def get_unconditional_conditioning(self, N):
+    #     return self.get_learned_conditioning(["chaotic, shadow, worst quality, low quality"] * N)
 
     @torch.no_grad()
     def log_valid_images(self, batch, ddim_steps=50, ddim_eta=0.0, return_keys=None,

@@ -13,7 +13,6 @@ class TrainDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
-        # return 64
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
@@ -59,7 +58,6 @@ class ValidDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
-        # return 8
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]

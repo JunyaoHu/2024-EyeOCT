@@ -7,7 +7,7 @@ model:
     log_every_t: 200
     timesteps: 1000
     first_stage_key: "jpg"
-    cond_stage_key: "txt"
+    cond_stage_key: "class_label"
     CF_key: "hint"
     num_global_feature: 512
     # num_local_feature: 256
@@ -64,3 +64,10 @@ model:
           target: torch.nn.Identity
 
     cond_stage_config: __is_unconditional__
+    # cond_stage_config:
+    #   target: ldm.modules.encoders.modules.ClassEmbedder
+    #   params:
+    #     # ? TODO: number of classes
+    #     # n_classes: 6
+    #     embed_dim: 512
+    #     key: class_label

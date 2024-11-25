@@ -6,15 +6,13 @@ from einops import rearrange
 from torch.utils.data import Dataset
 
 class TrainDataset(Dataset):
-    def __init__(self, path, width=512, dd=64):
+    def __init__(self, path, width=512):
         self.path = path
         self.data = pd.read_csv(os.path.join(self.path, 'train.csv'))
         self.width = width
-        self.dd = dd
 
     def __len__(self):
         return len(self.data)
-        # return 64
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
@@ -55,15 +53,13 @@ class TrainDataset(Dataset):
         )
     
 class ValidDataset(Dataset):
-    def __init__(self, path, width=512, dd=64):
+    def __init__(self, path, width=512):
         self.path = path
         self.data = pd.read_csv(os.path.join(self.path, 'val.csv'))
         self.width = width
-        self.dd = dd
 
     def __len__(self):
         return len(self.data)
-        # return 8
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
