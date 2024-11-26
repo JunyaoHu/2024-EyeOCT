@@ -33,8 +33,8 @@ model:
         use_spatial_transformer: True
         transformer_depth: 1
         context_dim:
+          class_dim: 512
           global_dim: 512
-          # local_dim: 256
         use_checkpoint: True
         legacy: False
 
@@ -63,11 +63,15 @@ model:
         lossconfig:
           target: torch.nn.Identity
 
-    cond_stage_config: __is_unconditional__
-    # cond_stage_config:
-    #   target: ldm.modules.encoders.modules.ClassEmbedder
-    #   params:
-    #     # ? TODO: number of classes
-    #     # n_classes: 6
-    #     embed_dim: 512
-    #     key: class_label
+    classifier_config:
+      target: cldm.classifier.Classifier
+      params:
+        n_classes: 4
+        ckpt_path: "./pretrained/CF_classification/classification_e49_acc0.805.pth"
+    
+    cond_stage_config:
+      target: ldm.modules.encoders.modules.ClassEmbedder
+      params:
+        n_classes: 4
+        embed_dim: 512
+        key: class_label

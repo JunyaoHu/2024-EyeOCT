@@ -8,7 +8,7 @@ from cldm.model import create_model, load_state_dict
 
 # Configs
 resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/DM_global512/checkpoints/epoch=277-step=13065.ckpt"
-batch_size = 2
+batch_size = 1
 learning_rate = 4e-5
 ddim_steps = 10
 accumulate = 4
@@ -16,7 +16,7 @@ accumulate = 4
 # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
 model = create_model('./models/cldm_v15.yaml').cpu()
 if resume_path:
-    model.load_state_dict(load_state_dict(resume_path, location='cpu'))
+    model.load_state_dict(load_state_dict(resume_path, location='cpu'), strict=False)
 model.learning_rate = learning_rate
 
 save_dir = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM"

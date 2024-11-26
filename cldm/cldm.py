@@ -7,37 +7,51 @@ import torch
 import torch.nn as nn
 
 from ldm.models.diffusion.ddpm import LatentDiffusion
-from ldm.util import log_txt_as_img
-
+from ldm.util import instantiate_from_config
 from torchvision import models
 import cv2
 
 class OCTLDM(LatentDiffusion):
 
-    def __init__(self, CF_key, num_global_feature, *args, **kwargs):
-    # def __init__(self, CF_key, num_global_feature, num_local_feature, *args, **kwargs):
+    def __init__(self, CF_key, classifier_config, num_global_feature, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.CF_key = CF_key
 
-        resnet = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
-        for param in resnet.parameters():
+        self.resnet = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1).to(self.device)
+        self.resnet.eval()
+        for param in self.resnet.parameters():
             param.requires_grad = False
-        
+
+        self.classifier = instantiate_from_config(classifier_config).to(self.device)
+        self.classifier.eval()
+        for param in self.classifier.parameters():
+            param.requires_grad = False
+
         layer = -3
-        self.feature_extractor = torch.nn.Sequential(*list(resnet.children())[:layer])
-        self.feature_extractor = self.feature_extractor.to(self.device)
+        self.feature_extractor = torch.nn.Sequential(*list(self.resnet.children())[:layer]).to(self.device)
+        self.feature_extractor.eval()
 
         self.global_process = torch.nn.Conv2d(1024, num_global_feature, kernel_size=1)
-        # self.local_process = torch.nn.Linear(512, num_local_feature)
 
+    def get_learned_conditioning(self, c):
+        with torch.no_grad():
+            batch = c
+            x = batch[self.CF_key].to(self.device)
+            x = einops.rearrange(x, 'b h w c -> b c h w')
+            x = self.resnet(x)
+            x = self.classifier(x)
+            x = torch.argmax(x, dim=1)
+            batch["class_label"] = x
+            cls_c = self.cond_stage_model(batch)
+        return cls_c
+    
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
-        x, _ = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+        x, cond_class = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+
         cond_global = batch[self.CF_key]
-        # cond_global, cond_local = batch[self.CF_key]
         if bs is not None:
             cond_global = cond_global[:bs]
-            # cond_local = cond_local[:bs]
 
         cond_global = cond_global.to(self.device)
         cond_global = einops.rearrange(cond_global, 'b h w c -> b c h w')
@@ -46,38 +60,20 @@ class OCTLDM(LatentDiffusion):
         cond_global = self.global_process(cond_global)
         cond_global = einops.rearrange(cond_global, 'b c h w -> b (h w) c')
         cond_global = cond_global.to(memory_format=torch.contiguous_format).float()
-        
-        # 6 是六个方向，dd 是局部所取区域的宽度，长度 w 是 256
-        # bs = cond_local.shape[0]
-        # cond_local = cond_local.to(self.device)
-        # cond_local = einops.rearrange(cond_local, 'b h w c -> b c h w')
-        # cond_local_origin = cond_local
-        # cond_local = einops.rearrange(cond_local, 'b c (d n) w -> (b c d n) w', n=6)
-        # cond_local = self.local_process(cond_local)
-        # cond_local = einops.rearrange(cond_local, '(b c d n) w -> b (c d n) w', b=bs, n=6, c=3)
-        # cond_local = cond_local.to(memory_format=torch.contiguous_format).float()
 
-        # cond_global torch.Size([20, 1024, 256]) 
-        # cond_local torch.Size([20, 2304=64*2*6*3, 256])
-        return x, dict(cond_global=[cond_global], cond_global_origin=[cond_global_origin])
-        # return x, dict(cond_global=[cond_global], cond_local=[cond_local], cond_global_origin=[cond_global_origin], cond_local_origin=[cond_local_origin])
+        return x, dict(cond_global=[cond_global], cond_global_origin=[cond_global_origin], cond_class=[cond_class])
 
     def apply_model(self, x_noisy, t, cond, *args, **kwargs):
         assert isinstance(cond, dict)
         diffusion_model = self.model.diffusion_model
 
         cond_global = torch.cat(cond['cond_global'], 1)
-        # cond_local = torch.cat(cond['cond_local'], 1)
-        context = dict(cond_global=cond_global)
-        # context = dict(cond_global=cond_global, cond_local=cond_local)
+        cond_class = torch.cat(cond['cond_class'], 1)
+        context = dict(cond_global=cond_global, cond_class=cond_class)
         
         eps = diffusion_model(x=x_noisy, timesteps=t, context=context)
 
         return eps
-
-    # @torch.no_grad()
-    # def get_unconditional_conditioning(self, N):
-    #     return self.get_learned_conditioning(["chaotic, shadow, worst quality, low quality"] * N)
 
     @torch.no_grad()
     def log_valid_images(self, batch, ddim_steps=50, ddim_eta=0.0, return_keys=None,
@@ -93,10 +89,9 @@ class OCTLDM(LatentDiffusion):
         N = z.shape[0]
         log["CF_path"] = batch["CF_path"][:N] 
         cond_global = c["cond_global"][0][:N]
-        # cond_local = c["cond_local"][0][:N]
+        cond_class = c["cond_class"][0][:N]
 
-        c_full = dict(cond_global=[cond_global])
-        # c_full = dict(cond_global=[cond_global], cond_local=[cond_local])
+        c_full = dict(cond_global=[cond_global], cond_class=[cond_class])
         samples_cfg, _ = self.sample_log(cond=c_full,
                                             batch_size=N, ddim=use_ddim,
                                             ddim_steps=ddim_steps, eta=ddim_eta,
@@ -150,19 +145,16 @@ class OCTLDM(LatentDiffusion):
         z, c = self.get_input(batch, self.first_stage_key, bs=N)
 
         cond_global = c["cond_global"][0][:N]
-        # cond_local = c["cond_local"][0][:N]
         cond_global_origin = c["cond_global_origin"][0][:N]
-        # cond_local_origin = c["cond_local_origin"][0][:N]
+        cond_class = c["cond_class"][0][:N]
         
         N = min(z.shape[0], N)
         n_row = min(z.shape[0], n_row)
         log["reconstruction"] = self.decode_first_stage(z)
         log["control_global"] = cond_global_origin * 2.0 - 1.0
-        # log["control_local"] = cond_local_origin * 2.0 - 1.0
 
         if unconditional_guidance_scale > 1.0:
-            c_full = dict(cond_global=[cond_global])
-            # c_full = dict(cond_global=[cond_global], cond_local=[cond_local])
+            c_full = dict(cond_global=[cond_global], cond_class=[cond_class])
             samples_cfg, _ = self.sample_log(cond=c_full,
                                              batch_size=N, ddim=use_ddim,
                                              ddim_steps=ddim_steps, eta=ddim_eta,

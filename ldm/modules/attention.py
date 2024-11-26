@@ -277,7 +277,7 @@ class BasicTransformerBlock(nn.Module):
 class OCTTransformerBlock(nn.Module):
     def __init__(self, dim, n_heads, d_head, dropout=0., 
                  global_dim=None, 
-                #  local_dim=None, 
+                 class_dim=None, 
                  gated_ff=True, checkpoint=True):
         super().__init__()
         self.attn1 = CrossAttention(
@@ -287,6 +287,13 @@ class OCTTransformerBlock(nn.Module):
             dropout=dropout,
             context_dim=None
         )
+        self.attn2 = CrossAttention(
+            query_dim=dim, 
+            heads=n_heads, 
+            context_dim=class_dim,
+            dim_head=d_head, 
+            dropout=dropout,
+        )
         self.attn3 = CrossAttention(
             query_dim=dim, 
             context_dim=global_dim,
@@ -294,39 +301,27 @@ class OCTTransformerBlock(nn.Module):
             dim_head=d_head, 
             dropout=dropout
         )
-        # self.attn4 = CrossAttention(
-        #     query_dim=dim, 
-        #     context_dim=local_dim,
-        #     heads=n_heads, 
-        #     dim_head=d_head, 
-        #     dropout=dropout
-        # )
         self.ff = FeedForward(dim, dropout=dropout, glu=gated_ff)
         self.norm1 = nn.LayerNorm(dim)
+        self.norm2 = nn.LayerNorm(dim)
         self.norm3 = nn.LayerNorm(dim)
-        # self.norm4 = nn.LayerNorm(dim)
-        self.norm5 = nn.LayerNorm(dim)
+        self.norm4 = nn.LayerNorm(dim)
         self.checkpoint = checkpoint
 
-    def forward(self, x, cond_global=None):
-        return checkpoint(self._forward, (x, cond_global), self.parameters(), self.checkpoint)
-    # def forward(self, x, cond_global=None, cond_local=None):
-    #     return checkpoint(self._forward, (x, cond_global, cond_local), self.parameters(), self.checkpoint)
+    def forward(self, x, cond_class=None, cond_global=None):
+        return checkpoint(self._forward, (x, cond_class, cond_global), self.parameters(), self.checkpoint)
 
-    def _forward(self, x, cond_global=None):
-    # def _forward(self, x, cond_global=None, cond_local=None):
-        # print("cond_text", cond_text.shape)
+    def _forward(self, x, cond_class=None, cond_global=None):
+        # print("cond_class", cond_local.shape)
         # print("cond_global", cond_global.shape)
-        # print("cond_local", cond_local.shape)
         # QKV-OCT self-attention
         x = self.attn1(self.norm1(x), context=None) + x
-        # Q-OCT KV-text cross-attention
+        # Q-OCT KV-class cross-attention
+        x = self.attn2(self.norm2(x), context=cond_class) + x
         # Q-OCT KV-CF_global cross-attention
         x = self.attn3(self.norm3(x), context=cond_global) + x
-        # Q-OCT KV-CF_local cross-attention
-        # x = self.attn4(self.norm4(x), context=cond_local) + x
         # FeedForward
-        x = self.ff(self.norm5(x)) + x
+        x = self.ff(self.norm4(x)) + x
         return x
 
 
@@ -366,7 +361,7 @@ class SpatialTransformer(nn.Module):
             ###################################################################
             [OCTTransformerBlock(inner_dim, n_heads, d_head, dropout=dropout, 
                                 global_dim=context_dim[d]['global_dim'],
-                                # local_dim=context_dim[d]['local_dim'],
+                                class_dim=context_dim[d]['class_dim'],
                                 checkpoint=use_checkpoint)
                 for d in range(depth)]
         )
@@ -396,7 +391,7 @@ class SpatialTransformer(nn.Module):
             x = block(
                 x, 
                 cond_global=context[i]['cond_global'], 
-                # cond_local=context[i]['cond_local']
+                cond_class=context[i]['cond_class']
             )
         if self.use_linear:
             x = self.proj_out(x)

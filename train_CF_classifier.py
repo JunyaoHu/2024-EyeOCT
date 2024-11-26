@@ -11,23 +11,11 @@ from tqdm import tqdm, trange
 import os
 import torch.nn.functional as F
 
-# Embedding
-class Classifier(nn.Module):
-    def __init__(self, n_classes):
-        super().__init__()
-        self.proj_in  = nn.Linear(1000, 512)
-        self.proj_mid  = nn.Linear(512, 64)
-        self.proj_out = nn.Linear(64, n_classes)
-
-    def forward(self, x):
-        x = self.proj_in(x)
-        x = self.proj_mid(x)
-        x = self.proj_out(x)
-        return x
+from cldm.classifier import Classifier
 
 batch_size = 128
 max_epoch = 50
-lr = 2e-3
+lr = 5e-4
 
 save_dir = "/home/pod/shared-nvme/tensorboard/logs/CF_classfier"
 
