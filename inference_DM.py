@@ -6,7 +6,7 @@ from dataset_DM import ValidDataset
 from cldm.model import create_model, load_state_dict
 
 # Configs
-resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/DM_global512/checkpoints/epoch=277-step=13065.ckpt"
+resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/version_2/checkpoints/epoch=163-step=7707.ckpt"
 batch_size = 16
 
 # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.

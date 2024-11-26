@@ -1,3 +1,4 @@
+import random
 import cv2
 import numpy as np
 import os
@@ -88,6 +89,52 @@ class ValidDataset(Dataset):
             PID=PID,
             CF_path=CF_path,
         )
+    
+class TrainDatasetWithLabel(Dataset):
+    def __init__(self, path, width=512):
+        self.path = path
+        self.data = pd.read_csv(os.path.join(self.path, 'train_with_label.csv'))
+        self.width = width
+
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        item = self.data.iloc[idx]
+        PID = item['PID']
+        CF_path = item['CF_path']
+        OCT_path = item['OCT_path']
+
+        source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
+        h, w, _ = source.shape
+        d12 = random.randint(-100, 100)
+        d3 = random.randint(0, 100)
+        d4 = random.randint(0, 100)
+        source = source[d3:h-d4, w//2-h//2+d12:w//2+h//2+d12, :]
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        source = cv2.resize(source, (self.width, self.width))
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        global_hint = source
+
+        label = [0,0,0,0]
+        for i in range(6):
+            label[item[f'infer_{i}']] += 1/6
+
+        label = np.argmax(label)
+
+        return dict(
+            label=label,
+            jpg="", 
+            txt="", 
+            hint=global_hint, 
+            id=idx,
+            PID=PID,
+            CF_path=CF_path,
+            OCT_path=OCT_path
+        )
 
 if __name__ == '__main__':
 
@@ -112,3 +159,10 @@ if __name__ == '__main__':
     print(PID)
     print(CF_path)
     print(OCT_path)
+
+    data_path = "/home/pod/shared-nvme/data/EyeOCT/train"
+    train_dataset = TrainDatasetWithLabel(data_path)
+
+    item = train_dataset[2]
+    label = item['label']
+    print(label)

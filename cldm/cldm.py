@@ -111,7 +111,7 @@ class OCTLDM(LatentDiffusion):
     def shared_step_test(self, batch, batch_idx):
         ddim_steps = 5
         images = self.log_valid_images(batch, ddim_steps=ddim_steps)
-        foldername = f"./log_valid/11260030-ddim{ddim_steps}/samples"
+        foldername = f"./log_valid/11261100-ddim{ddim_steps}/samples"
         os.makedirs(foldername, exist_ok=True)
 
         for k in ["samples"]:
