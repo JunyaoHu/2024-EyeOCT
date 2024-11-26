@@ -33,7 +33,7 @@ model:
         use_spatial_transformer: True
         transformer_depth: 1
         context_dim:
-          class_dim: 512
+          class_dim: 256
           global_dim: 512
         use_checkpoint: True
         legacy: False
@@ -73,5 +73,5 @@ model:
       target: ldm.modules.encoders.modules.ClassEmbedder
       params:
         n_classes: 4
-        embed_dim: 512
+        embed_dim: 256
         key: class_label
