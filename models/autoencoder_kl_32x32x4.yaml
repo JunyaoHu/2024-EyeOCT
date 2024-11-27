@@ -24,32 +24,3 @@ model:
       num_res_blocks: 2
       attn_resolutions: [ ]
       dropout: 0.0
-
-# data:
-#   target: main.DataModuleFromConfig
-#   params:
-#     batch_size: 12
-#     wrap: True
-#     train:
-#       target: ldm.data.imagenet.ImageNetSRTrain
-#       params:
-#         size: 256
-#         degradation: pil_nearest
-#     validation:
-#       target: ldm.data.imagenet.ImageNetSRValidation
-#       params:
-#         size: 256
-#         degradation: pil_nearest
-
-# lightning:
-  # callbacks:
-  #   image_logger:
-  #     target: main.ImageLogger
-  #     params:
-  #       batch_frequency: 1000
-  #       max_images: 8
-  #       increase_log_steps: True
-
-  # trainer:
-  #   benchmark: True
-  #   accumulate_grad_batches: 2

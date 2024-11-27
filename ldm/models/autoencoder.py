@@ -166,7 +166,6 @@ class AutoencoderKL(pl.LightningModule):
 
     @torch.no_grad()
     def log_images(self, batch, only_inputs=False, log_ema=False, **kwargs):
-        ##################### after ###########################
         log = dict()
         x = self.get_input(batch, self.image_key)
         x = x.to(self.device)
@@ -180,31 +179,6 @@ class AutoencoderKL(pl.LightningModule):
             log["reconstructions"] = xrec
         log["inputs"] = x
         return log
-
-        ##################### before ###########################
-        # log = dict()
-        # x = self.get_input(batch, self.image_key)
-        # x = x.to(self.device)
-        # if not only_inputs:
-        #     xrec, posterior = self(x)
-        #     if x.shape[1] > 3:
-        #         # colorize with random projection
-        #         assert xrec.shape[1] > 3
-        #         x = self.to_rgb(x)
-        #         xrec = self.to_rgb(xrec)
-        #     log["samples"] = self.decode(torch.randn_like(posterior.sample()))
-        #     log["reconstructions"] = xrec
-        #     if log_ema or self.use_ema:
-        #         with self.ema_scope():
-        #             xrec_ema, posterior_ema = self(x)
-        #             if x.shape[1] > 3:
-        #                 # colorize with random projection
-        #                 assert xrec_ema.shape[1] > 3
-        #                 xrec_ema = self.to_rgb(xrec_ema)
-        #             log["samples_ema"] = self.decode(torch.randn_like(posterior_ema.sample()))
-        #             log["reconstructions_ema"] = xrec_ema
-        # log["inputs"] = x
-        # return log
 
     def to_rgb(self, x):
         assert self.image_key == "segmentation"

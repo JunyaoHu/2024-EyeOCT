@@ -17,41 +17,23 @@ time = datetime.now().strftime("%m%d%H%M")
 
 class OCTLDM(LatentDiffusion):
 
-    def __init__(self, CF_key, classifier_config, num_global_feature, *args, **kwargs):
+    def __init__(self, CF_key, num_global_feature, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.CF_key = CF_key
 
-        self.resnet = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1).to(self.device)
-        self.resnet.eval()
-        for param in self.resnet.parameters():
-            param.requires_grad = False
-
-        self.classifier = instantiate_from_config(classifier_config).to(self.device)
-        self.classifier.eval()
-        for param in self.classifier.parameters():
+        resnet = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        for param in resnet.parameters():
             param.requires_grad = False
 
         layer = -3
-        self.feature_extractor = torch.nn.Sequential(*list(self.resnet.children())[:layer]).to(self.device)
+        self.feature_extractor = torch.nn.Sequential(*list(resnet.children())[:layer]).to(self.device)
         self.feature_extractor.eval()
 
         self.global_process = torch.nn.Conv2d(1024, num_global_feature, kernel_size=1)
-
-    def get_learned_conditioning(self, c):
-        with torch.no_grad():
-            batch = c
-            x = batch[self.CF_key].to(self.device)
-            x = einops.rearrange(x, 'b h w c -> b c h w')
-            x = self.resnet(x)
-            x = self.classifier(x)
-            x = torch.argmax(x, dim=1)
-            batch["class_label"] = x
-            cls_c = self.cond_stage_model(batch)
-        return cls_c
     
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
-        x, cond_class = super().get_input(batch, self.first_stage_key, *args, **kwargs)
+        x, _ = super().get_input(batch, self.first_stage_key, *args, **kwargs)
 
         cond_global = batch[self.CF_key]
         if bs is not None:
@@ -65,15 +47,14 @@ class OCTLDM(LatentDiffusion):
         cond_global = einops.rearrange(cond_global, 'b c h w -> b (h w) c')
         cond_global = cond_global.to(memory_format=torch.contiguous_format).float()
 
-        return x, dict(cond_global=[cond_global], cond_global_origin=[cond_global_origin], cond_class=[cond_class])
+        return x, dict(cond_global=[cond_global], cond_global_origin=[cond_global_origin])
 
     def apply_model(self, x_noisy, t, cond, *args, **kwargs):
         assert isinstance(cond, dict)
         diffusion_model = self.model.diffusion_model
 
         cond_global = torch.cat(cond['cond_global'], 1)
-        cond_class = torch.cat(cond['cond_class'], 1)
-        context = dict(cond_global=cond_global, cond_class=cond_class)
+        context = dict(cond_global=cond_global)
         
         eps = diffusion_model(x=x_noisy, timesteps=t, context=context)
 
@@ -93,9 +74,8 @@ class OCTLDM(LatentDiffusion):
         N = z.shape[0]
         log["CF_path"] = batch["CF_path"][:N] 
         cond_global = c["cond_global"][0][:N]
-        cond_class = c["cond_class"][0][:N]
 
-        c_full = dict(cond_global=[cond_global], cond_class=[cond_class])
+        c_full = dict(cond_global=[cond_global])
         samples_cfg, _ = self.sample_log(cond=c_full,
                                             batch_size=N, ddim=use_ddim,
                                             ddim_steps=ddim_steps, eta=ddim_eta,
@@ -152,7 +132,6 @@ class OCTLDM(LatentDiffusion):
 
         cond_global = c["cond_global"][0][:N]
         cond_global_origin = c["cond_global_origin"][0][:N]
-        cond_class = c["cond_class"][0][:N]
         
         N = min(z.shape[0], N)
         n_row = min(z.shape[0], n_row)
@@ -160,7 +139,7 @@ class OCTLDM(LatentDiffusion):
         log["control_global"] = cond_global_origin * 2.0 - 1.0
 
         if unconditional_guidance_scale > 1.0:
-            c_full = dict(cond_global=[cond_global], cond_class=[cond_class])
+            c_full = dict(cond_global=[cond_global])
             samples_cfg, _ = self.sample_log(cond=c_full,
                                              batch_size=N, ddim=use_ddim,
                                              ddim_steps=ddim_steps, eta=ddim_eta,
