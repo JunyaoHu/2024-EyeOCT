@@ -11,6 +11,10 @@ from ldm.util import instantiate_from_config
 from torchvision import models
 import cv2
 
+from datetime import datetime
+
+time = datetime.now().strftime("%m%d%H%M")
+
 class OCTLDM(LatentDiffusion):
 
     def __init__(self, CF_key, classifier_config, num_global_feature, *args, **kwargs):
@@ -104,9 +108,11 @@ class OCTLDM(LatentDiffusion):
         return log
 
     def shared_step_test(self, batch, batch_idx):
-        ddim_steps = 5
+        ddim_steps = 10
         images = self.log_valid_images(batch, ddim_steps=ddim_steps)
-        foldername = f"./log_valid/11261100-ddim{ddim_steps}/samples"
+        
+        foldername = f"./log_valid/{time}-ddim{ddim_steps}/samples"
+
         os.makedirs(foldername, exist_ok=True)
 
         for k in ["samples"]:

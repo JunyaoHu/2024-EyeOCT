@@ -10,7 +10,6 @@ model:
     cond_stage_key: "class_label"
     CF_key: "hint"
     num_global_feature: 512
-    # num_local_feature: 256
     image_size: 64
     channels: 4
     cond_stage_trainable: false
@@ -70,6 +69,7 @@ model:
         ckpt_path: "./pretrained/CF_classification/classification_e49_acc0.805.pth"
     
     cond_stage_config:
+      # target: __is_unconditional__
       target: ldm.modules.encoders.modules.ClassEmbedder
       params:
         n_classes: 4

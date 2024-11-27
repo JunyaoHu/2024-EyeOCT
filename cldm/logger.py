@@ -47,7 +47,6 @@ class ImageLogger(Callback):
         Image.fromarray(grids).save(path)
         
         for k in ["control_global"]:
-        # for k in ["control_global", "control_local"]:
             grid = torchvision.utils.make_grid(images[k], nrow=1, padding=0)
             grid = (grid + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
             grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
