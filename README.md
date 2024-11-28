@@ -1,5 +1,7 @@
 # 2024-Eye-OCT
 
-```
-pip install taming-transformers
-```
+2024年亚太眼科学会大数据竞赛 使用人工智能自動從眼底照生成OCT （25/40）baseline 代码
+
+FVD: 1083.8656
+SSIM: 0.1367
+PSNR: 13.3087
