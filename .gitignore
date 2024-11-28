@@ -2,4 +2,7 @@
 eyeoct.egg-info
 
 pretrained/AE/*
+pretrained/DM/*
+pretrained/OCT_Classification/*
 taming/*
+log_valid/*

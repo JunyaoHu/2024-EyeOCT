@@ -20,10 +20,10 @@ model.learning_rate = learning_rate
 save_dir = "/home/pod/shared-nvme/tensorboard/logs/OCT_AE"
 
 # Misc
-dataset = TrainDataset("/home/pod/shared-nvme/data/EyeOCT/train")
+dataset = TrainDataset("/home/pod/shared-nvme/data/EyeOCT/train", width=256)
 dataloader = DataLoader(dataset, num_workers=14, batch_size=batch_size, shuffle=True)
 logger = ImageLogger(batch_frequency=500, max_images=8, increase_log_steps=True)
-trainer = pl.Trainer(strategy='ddp', gpus=2, precision=32, callbacks=[logger], default_root_dir=save_dir)
+trainer = pl.Trainer(strategy='ddp', gpus=2, precision=32, callbacks=[logger], default_root_dir=save_dir, max_steps=-1)
 # trainer = pl.Trainer(gpus=1, callbacks=[logger])
 trainer.fit(model, dataloader)
 

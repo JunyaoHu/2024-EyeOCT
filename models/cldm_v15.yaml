@@ -7,9 +7,9 @@ model:
     log_every_t: 200
     timesteps: 1000
     first_stage_key: "jpg"
-    cond_stage_key: "txt"
+    cond_stage_key: ""
     CF_key: "hint"
-    num_global_feature: 256
+    num_global_feature: 512
     image_size: 64
     channels: 4
     cond_stage_trainable: false
@@ -32,9 +32,7 @@ model:
         use_spatial_transformer: True
         transformer_depth: 1
         context_dim:
-          text_dim: 768
-          global_dim: 256
-          local_dim: 256
+          global_dim: 512
         use_checkpoint: True
         legacy: False
 
@@ -62,6 +60,5 @@ model:
           dropout: 0.0
         lossconfig:
           target: torch.nn.Identity
-
-    cond_stage_config:
-      target: ldm.modules.encoders.modules.FrozenCLIPEmbedder
+    
+    cond_stage_config:  __is_unconditional__

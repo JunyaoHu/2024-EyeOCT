@@ -27,30 +27,34 @@ class ImageLogger(Callback):
 
     @rank_zero_only
     def log_local(self, save_dir, split, images, global_step, current_epoch, batch_idx):
-        
         root = os.path.join(save_dir, "log_train", split)
-        for k in images:
-            grid = torchvision.utils.make_grid(images[k], nrow=1)
-            if self.rescale:
-                grid = (grid + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
+        foldername = "gs-{:06}_e-{:06}_b-{:06}".format(global_step, current_epoch, batch_idx)
+        os.makedirs(os.path.join(root, foldername), exist_ok=True)
+
+        grids = []
+        for k in ["reconstruction", "samples"]:
+            grid = torchvision.utils.make_grid(images[k], nrow=1, padding=0)
+            grid = (grid + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
+            grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
+            grid = grid.numpy()
+            grid = (grid * 255).astype(np.uint8)
+            grid = rearrange(grid, 'h w c -> h (c w)')
+            grids.append(grid)
+
+        grids = np.concatenate(grids, axis=0)
+        filename = "recon_sample_gs-{:06}_e-{:06}_b-{:06}.png".format(global_step, current_epoch, batch_idx)
+        path = os.path.join(root, foldername, filename)
+        Image.fromarray(grids).save(path)
+        
+        for k in ["control_global"]:
+            grid = torchvision.utils.make_grid(images[k], nrow=1, padding=0)
+            grid = (grid + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w
             grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
             grid = grid.numpy()
             grid = (grid * 255).astype(np.uint8)
             filename = "{}_gs-{:06}_e-{:06}_b-{:06}.png".format(k, global_step, current_epoch, batch_idx)
-            path = os.path.join(root, filename)
-            os.makedirs(os.path.split(path)[0], exist_ok=True)
-            # print(k, grid.shape)
-            # log_images reconstruction         torch.Size([2*256, 256+4, 6]) # OCT重建（六张）灰度
-            # log_images control                torch.Size([2*256, 256+4, 3]) # CF图
-            # log_images conditioning           torch.Size([2*512, 512+4, 3]) # 提示词
-            # log_images samples_cfg_scale_9.00 torch.Size([2*512, 512+4, 6]) # OCT生成（六张）灰度
-            if k == "reconstruction" or 'samples' in k:
-                grid = rearrange(grid, 'h w c -> h (c w)')
-                Image.fromarray(grid).save(path)
-            elif k == "reconstruction" or 'samples' in k:
-                Image.fromarray(grid).save(path)
-            else:
-                KeyError("log_images key not found")
+            path = os.path.join(root, foldername, filename)
+            Image.fromarray(grid).save(path)
 
     def log_img(self, pl_module, batch, batch_idx, split="train"):
         check_idx = pl_module.global_step

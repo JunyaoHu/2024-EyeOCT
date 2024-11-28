@@ -673,6 +673,7 @@ class LatentDiffusion(DDPM):
             raise NotImplementedError(f"encoder_posterior of type '{type(encoder_posterior)}' not yet implemented")
         return self.scale_factor * z
 
+    # 已经在cldm.py中覆盖实现了
     def get_learned_conditioning(self, c):
         if self.cond_stage_forward is None:
             if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
@@ -1207,7 +1208,6 @@ class LatentDiffusion(DDPM):
                 if t % self.log_every_t == 0 or t == self.num_timesteps - 1:
                     t = repeat(torch.tensor([t]), '1 -> b', b=n_row)
                     t = t.to(self.device).long()
-                    # TODO: 把这个噪声给改了
                     noise = torch.randn_like(z_start)
                     z_noisy = self.q_sample(x_start=z_start, t=t, noise=noise)
                     diffusion_row.append(self.decode_first_stage(z_noisy))

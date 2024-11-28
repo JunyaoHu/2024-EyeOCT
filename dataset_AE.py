@@ -6,21 +6,19 @@ import pandas as pd
 from torch.utils.data import Dataset
 
 class TrainDataset(Dataset):
-    def __init__(self, path, width=256):
+    def __init__(self, path, width=512):
         self.path = path
         self.data = pd.read_csv(os.path.join(self.path, 'train.csv'))
         self.width = width
 
     def __len__(self):
         return len(self.data)
-        # return 64
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
         PID = item['PID']
         CF_path = item['CF_path']
         OCT_path = item['OCT_path']
-        prompt = "A cross-section of the retina obtained using optical coherence tomography, medical image, black and white"
 
         source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
         h, w, _ = source.shape
@@ -44,7 +42,7 @@ class TrainDataset(Dataset):
 
         return dict(
             jpg=target, 
-            txt=prompt, 
+            txt="", 
             hint=source, 
             id=idx,
             PID=PID,
@@ -53,20 +51,18 @@ class TrainDataset(Dataset):
         )
     
 class ValidDataset(Dataset):
-    def __init__(self, path, width=256):
+    def __init__(self, path, width=512):
         self.path = path
         self.data = pd.read_csv(os.path.join(self.path, 'val.csv'))
         self.width = width
 
     def __len__(self):
         return len(self.data)
-        # return 8
 
     def __getitem__(self, idx):
         item = self.data.iloc[idx]
         PID = item['PID']
         CF_path = item['CF_path']
-        prompt = "A cross-section of the retina obtained using optical coherence tomography, medical image, black and white"
 
         source = cv2.imread(os.path.join(self.path, 'CF', CF_path))
         h, w, _ = source.shape
@@ -82,7 +78,7 @@ class ValidDataset(Dataset):
 
         return dict(
             jpg=target, 
-            txt=prompt, 
+            txt="", 
             hint=source, 
             id=idx,
             PID=PID,
