@@ -7,7 +7,7 @@ from cldm.logger import ImageLogger
 from cldm.model import create_model, load_state_dict
 
 # Configs
-resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/DM_global512/checkpoints/epoch=277-step=13065.ckpt"
+resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/DM_global512_resume/checkpoints/epoch=182-step=17201.ckpt"
 batch_size = 2
 learning_rate = 2e-5
 ddim_steps = 10

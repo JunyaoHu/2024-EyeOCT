@@ -6,7 +6,7 @@ from dataset_DM import ValidDataset
 from cldm.model import create_model, load_state_dict
 
 # Configs
-resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/DM_global512/checkpoints/epoch=277-step=13065.ckpt"
+resume_path = "/home/pod/shared-nvme/tensorboard/logs/OCT_DM/lightning_logs/DM_global512_resume/checkpoints/epoch=182-step=17201.ckpt"
 batch_size = 8
 
 # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
@@ -31,5 +31,5 @@ python inference_DM.py
 nvitop
 
 cd /home/pod/project/code/EyeOCT/log_valid/1124-1830/samples
-zip submit.zip -r ./
+zip submit.zip -r ./ ; mv submit.zip ../
 """
