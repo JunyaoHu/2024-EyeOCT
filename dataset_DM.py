@@ -1,9 +1,7 @@
-import random
 import cv2
 import numpy as np
 import os
 import pandas as pd
-from einops import rearrange
 from torch.utils.data import Dataset
 
 class TrainDataset(Dataset):
@@ -30,8 +28,6 @@ class TrainDataset(Dataset):
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0
 
-        global_hint = source
-
         target = np.zeros((self.width, self.width, 6))
         for i in range(6):
             target_i = cv2.imread(os.path.join(self.path, 'OCT', OCT_path, f"{OCT_path}_{i}.jpg"), cv2.IMREAD_GRAYSCALE)
@@ -46,7 +42,7 @@ class TrainDataset(Dataset):
         return dict(
             jpg=target, 
             txt="", 
-            hint=global_hint, 
+            hint=source, 
             id=idx,
             PID=PID,
             CF_path=CF_path,
@@ -76,20 +72,18 @@ class ValidDataset(Dataset):
         # Normalize source images to [0, 1].
         source = source.astype(np.float32) / 255.0
 
-        global_hint = source
-
         # Normalize target images to [-1, 1].
         target = np.zeros((self.width, self.width, 6))
 
         return dict(
             jpg=target, 
             txt="", 
-            hint=global_hint, 
+            hint=source, 
             id=idx,
             PID=PID,
             CF_path=CF_path,
         )
-    
+
 if __name__ == '__main__':
 
     data_path = "/home/pod/shared-nvme/data/EyeOCT/train"
